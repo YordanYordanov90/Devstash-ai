@@ -18,8 +18,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <TopBar
-        onMenuClick={() => setMobileMenuOpen(true)}
-        onSidebarToggle={() => setSidebarCollapsed((c) => !c)}
+        
       />
       <div className="flex flex-1">
         <aside

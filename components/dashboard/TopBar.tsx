@@ -2,35 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, PanelLeft, Menu, FolderPlus } from "lucide-react";
+import { Search, Plus,  FolderPlus } from "lucide-react";
 
-interface TopBarProps {
-  onMenuClick?: () => void;
-  onSidebarToggle?: () => void;
-}
 
-export function TopBar({ onMenuClick, onSidebarToggle }: TopBarProps) {
+
+export function TopBar({   }) {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border bg-background px-4">
       <div className="flex flex-1 items-center gap-2 md:gap-4">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="md:hidden"
-          onClick={onMenuClick}
-          aria-label="Open menu"
-        >
-          <Menu className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="hidden md:flex"
-          onClick={onSidebarToggle}
-          aria-label="Toggle sidebar"
-        >
-          <PanelLeft className="size-4" />
-        </Button>
+        
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
