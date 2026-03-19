@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export default async function ItemDetailPage({
+export default async function CollectionDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -9,7 +9,7 @@ export default async function ItemDetailPage({
   return (
     <div className="p-6">
       <p className="text-muted-foreground">
-        Item: <strong>{id}</strong>. (Placeholder — coming soon.)
+        Collection: <strong>{id}</strong>. (Placeholder — coming soon.)
       </p>
       <Link href="/dashboard" className="text-primary hover:underline">
         Back to dashboard
@@ -17,3 +17,4 @@ export default async function ItemDetailPage({
     </div>
   );
 }
+

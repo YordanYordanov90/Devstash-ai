@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { FolderOpen } from "lucide-react";
+import { SignedIn, SignedOut, UserButton } from "@neondatabase/auth/react/ui";
+import { cn } from "@/lib/utils";
 
 export function Navigation() {
   return (
@@ -34,19 +36,45 @@ export function Navigation() {
 
         {/* Auth Buttons */}
         <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Sign In
-          </Button>
-          <Button 
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground glow-coral"
-          >
-            Get Started
-          </Button>
+          <SignedOut>
+            <Link
+              href="/auth/sign-in"
+              className={cn(
+                buttonVariants({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "text-muted-foreground hover:text-foreground",
+                })
+              )}
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/auth/sign-up"
+              className={cn(
+                buttonVariants({
+                  size: "sm",
+                  className: "bg-primary hover:bg-primary/90 text-primary-foreground glow-coral",
+                })
+              )}
+            >
+              Get Started
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className={cn(
+                buttonVariants({
+                  size: "sm",
+                  className: "bg-primary hover:bg-primary/90 text-primary-foreground glow-coral",
+                })
+              )}
+            >
+              Go to Dashboard
+            </Link>
+            <UserButton size='icon' />
+          </SignedIn>
         </div>
       </div>
     </header>

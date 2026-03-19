@@ -1,15 +1,15 @@
 import Link from "next/link";
 
-export default async function ItemsByTypePage({
+export default async function ItemDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { slug } = await params;
+  const { id } = await params;
   return (
     <div className="p-6">
       <p className="text-muted-foreground">
-        Items by type: <strong>{slug}</strong>. (Placeholder — coming soon.)
+        Item: <strong>{id}</strong>. (Placeholder — coming soon.)
       </p>
       <Link href="/dashboard" className="text-primary hover:underline">
         Back to dashboard
@@ -17,3 +17,4 @@ export default async function ItemsByTypePage({
     </div>
   );
 }
+
