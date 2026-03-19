@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus,  FolderPlus } from "lucide-react";
+import { UserButton } from "@neondatabase/auth/react/ui";
 
 
 
@@ -34,6 +35,9 @@ export function TopBar({   }) {
           <Plus className="size-4" />
           New Item
         </Button>
+        <div className="ml-2">
+          <UserButton size='icon' />
+        </div>
       </div>
     </header>
   );
