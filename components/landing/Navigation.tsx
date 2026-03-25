@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function Navigation() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-white/10 bg-background/90 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">

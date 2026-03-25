@@ -1,23 +1,26 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { items, collections } from "@/lib/mock-data";
+import type { CollectionInfo, ItemInfo } from "@/types/dashboard";
 
-function getStats() {
-  const totalItems = items.length;
-  const totalCollections = collections.length;
-  const favoriteItems = items.filter((i) => i.isFavorite).length;
-  const favoriteCollections = collections.filter((c) => c.isFavorite).length;
-  return { totalItems, totalCollections, favoriteItems, favoriteCollections };
+interface StatsCardsProps {
+  items: ItemInfo[];
+  collections: CollectionInfo[];
 }
 
-const statLabels: Record<string, string> = {
-  totalItems: "Items",
-  totalCollections: "Collections",
-  favoriteItems: "Favorite items",
-  favoriteCollections: "Favorite collections",
-};
+export function StatsCards({ items, collections }: StatsCardsProps) {
+  const stats = {
+    totalItems: items.length,
+    totalCollections: collections.length,
+    favoriteItems: items.filter((item) => item.isFavorite).length,
+    favoriteCollections: collections.filter((collection) => collection.isFavorite)
+      .length,
+  };
 
-export function StatsCards() {
-  const stats = getStats();
+  const statLabels: Record<string, string> = {
+    totalItems: "Items",
+    totalCollections: "Collections",
+    favoriteItems: "Favorite items",
+    favoriteCollections: "Favorite collections",
+  };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

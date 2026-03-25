@@ -157,7 +157,7 @@ export function Pricing() {
                 }`}
               >
                 {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground">
+                  <Badge className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground">
                     Most Popular
                   </Badge>
                 )}

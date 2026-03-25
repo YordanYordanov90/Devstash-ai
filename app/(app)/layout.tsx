@@ -11,7 +11,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/auth/sign-in");
   }
 
-  await syncUserFromSession(data);
+  try {
+    await syncUserFromSession(data);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Failed to sync user from session", error);
+    }
+  }
 
   return children;
 }

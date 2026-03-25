@@ -1,61 +1,10 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { 
-  Code, 
-  Bot, 
-  Search, 
-  Terminal, 
-  FileText, 
-  FolderOpen 
-} from "lucide-react";
+import { landingFeatures } from "@/lib/landing/feature-definitions";
 import { motion, useInView } from "framer-motion";
+import type { CSSProperties } from "react";
 import { useRef } from "react";
-
-const features = [
-  {
-    icon: Code,
-    title: "Code Snippets",
-    description: "Save reusable code with syntax highlighting, language detection, and instant copy. Never rewrite the same function twice.",
-    color: "bg-amber-500/20",
-    iconColor: "text-amber-500"
-  },
-  {
-    icon: Bot,
-    title: "AI Prompts",
-    description: "Store and organize your best prompts for ChatGPT, Claude, and other AI tools. Build a personal prompt library.",
-    color: "bg-orange-500/20",
-    iconColor: "text-orange-500"
-  },
-  {
-    icon: Search,
-    title: "Instant Search",
-    description: "Find anything in milliseconds. Search across all your items by content, tags, titles, or type with Cmd+K.",
-    color: "bg-yellow-500/20",
-    iconColor: "text-yellow-500"
-  },
-  {
-    icon: Terminal,
-    title: "Commands",
-    description: "Keep your most-used terminal commands at your fingertips. No more digging through bash history.",
-    color: "bg-amber-600/20",
-    iconColor: "text-amber-600"
-  },
-  {
-    icon: FileText,
-    title: "Files & Docs",
-    description: "Upload and manage files, images, and documents. Keep your project assets organized alongside your code.",
-    color: "bg-orange-400/20",
-    iconColor: "text-orange-400"
-  },
-  {
-    icon: FolderOpen,
-    title: "Collections",
-    description: "Group related items into collections. Organize by project, topic, or workflow for quick access.",
-    color: "bg-amber-400/20",
-    iconColor: "text-amber-400"
-  }
-];
 
 export function Features() {
   const headerRef = useRef(null);
@@ -99,8 +48,11 @@ export function Features() {
   return (
     <section id="features" className="py-16 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Section divider */}
+        <div className="section-divider mb-16 md:mb-24" />
+
         {/* Header */}
-        <motion.div 
+        <motion.div
           ref={headerRef}
           className="text-center mb-12 md:mb-16"
           initial="hidden"
@@ -112,26 +64,47 @@ export function Features() {
             <span className="text-gradient-warm">One Place</span>
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            Stop context-switching between tools. DevStash keeps all your developer 
+            Stop context-switching between tools. DevStash keeps all your developer
             resources organized and searchable.
           </p>
         </motion.div>
 
         {/* Features Grid */}
-        <motion.div 
+        <motion.div
           ref={gridRef}
           className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
           initial="hidden"
           animate={isGridInView ? "visible" : "hidden"}
           variants={containerVariants}
         >
-          {features.map((feature) => (
+          {landingFeatures.map((feature, i) => (
             <motion.div key={feature.title} variants={itemVariants}>
-              <Card 
-                className="p-6 bg-card/50 border-border/50 hover:border-accent/30 transition-all group"
-              >
-                <div className={`size-12 rounded-xl ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className={`size-6 ${feature.iconColor}`} />
+              {/*
+                Card defaults to overflow-hidden, which clips translateY on the icon.
+                overflow-visible restores the same floating motion as AuthPageShell.
+              */}
+              <Card className="group overflow-visible p-6 bg-card/60 border-white/15 card-pattern relative transition-all duration-300 hover:border-white/25 hover:bg-card/70">
+                {/* Inner glow for depth */}
+                <div className="absolute inset-0 rounded-xl card-inner-glow pointer-events-none" />
+                
+                <div className="relative mb-4 flex h-14 items-center">
+                  <div
+                    className="animate-feature-icon-bob inline-flex will-change-transform"
+                    style={
+                      {
+                        "--feature-bob-duration": `${5 + i * 0.45}s`,
+                        "--feature-bob-delay": `${i * 0.4}s`,
+                      } as CSSProperties
+                    }
+                  >
+                    <div
+                      className={`size-12 rounded-xl ${feature.color} flex items-center justify-center transition-all duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-lg`}
+                      style={{ boxShadow: 'transparent' }}
+                    >
+                      <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity group-hover:icon-glow" />
+                      <feature.icon className={`size-6 ${feature.iconColor} relative z-10`} />
+                    </div>
+                  </div>
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {feature.title}

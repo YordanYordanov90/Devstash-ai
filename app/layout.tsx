@@ -3,7 +3,6 @@ import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 
 import { authServer } from "@/lib/auth/server";
-import { syncUserFromSession } from "@/lib/auth/sync-user";
 import { AuthProvider } from "./auth-provider";
 
 const inter = Inter({
@@ -27,15 +26,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { data } = await authServer.getSession({
+  await authServer.getSession({
     query: {
       disableCookieCache: true,
     },
   });
-
-  if (data) {
-    await syncUserFromSession(data);
-  }
 
   return (
     <html lang="en" className={`dark ${poppins.variable}`} suppressHydrationWarning>
