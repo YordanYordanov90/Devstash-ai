@@ -1,10 +1,14 @@
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { SidebarContent } from "@/components/dashboard/SidebarContent";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <DashboardShell sidebar={<SidebarContent />}>
+      {children}
+    </DashboardShell>
+  );
 }
-

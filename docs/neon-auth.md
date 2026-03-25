@@ -108,6 +108,27 @@ The main app routes are protected server-side using a route group:
 
 This prevents client-side auth bypass, because the redirect happens in a Server Component layout.
 
+### Optional: Next.js 16 Proxy (`proxy.ts`)
+
+The project root includes **`proxy.ts`** (Next.js 16 name for the former `middleware.ts`). It uses Neon’s **`neonAuthMiddleware`** from `@neondatabase/auth/next/server` with `loginUrl: /auth/sign-in` for an **early** session check on app shell paths only.
+
+**Why the matcher is narrow**
+
+`neonAuthMiddleware` redirects when there is no valid session. Its built-in skip list covers `/api/auth` and specific `/auth/*` routes, but **not** the public landing `/`. A catch-all matcher would redirect anonymous users away from `/`, so the proxy **`config.matcher`** only includes:
+
+- `/dashboard/:path*`
+- `/collections/:path*`
+- `/items/:path*`
+- `/item/:path*`
+
+When you add new routes under `app/(app)/`, add the corresponding URL prefix to `proxy.ts`’s matcher (until then, `app/(app)/layout.tsx` still enforces auth).
+
+**Source of truth**
+
+`app/(app)/layout.tsx` remains the **authoritative** gate (`getSession`, redirect, `syncUserFromSession`). The proxy is defense-in-depth, not a replacement for server-side checks next to your data.
+
+If `NEON_AUTH_BASE_URL` is unset (e.g. some CI builds), the proxy handler is a no-op pass-through so `next build` can complete, consistent with the env guard on `app/api/auth/[...path]/route.ts`.
+
 ---
 
 ## File/Route Structure
@@ -127,6 +148,8 @@ app/
 lib/auth/
 ├── client.ts                     # createAuthClient() singleton (client hooks)
 └── server.ts                     # createAuthServer() singleton (server session checks)
+
+proxy.ts                          # Next.js 16 proxy: optional early auth on (app) URLs only
 ```
 
 ---
@@ -182,7 +205,30 @@ To make Google sign-in work:
 
 ⚠️ **SECURITY ALERT**
 
-- **Server-side gating is required.** The protected `(app)` layout enforces auth before rendering app routes.
+- **Server-side gating is required.** The protected `(app)` layout enforces auth before rendering app routes. Root `proxy.ts` adds an optional earlier redirect on matched paths only; do not rely on it as the sole authorization layer.
 - **Avoid open redirects.** Redirect targets are fixed to `/auth/sign-in` in the protected layout.
 - **Do not log session tokens or cookies.** Neon Auth uses cookies for session state; keep them out of logs.
+
+---
+
+## Rate Limiting (Upstash)
+
+Authentication and protected app shell routes are rate limited with Upstash Redis:
+
+- **Shared utility:** `lib/security/rate-limit.ts`
+- **Auth API enforcement:** `app/api/auth/[...path]/route.ts`
+- **Protected route enforcement:** `proxy.ts`
+
+Required env vars:
+
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Initial policy defaults:
+
+- `authStrict`: `5 requests / 1 minute` (fail-closed)
+- `authBurst`: `20 requests / 10 minutes` (fail-closed)
+- `protectedPages`: `120 requests / 1 minute` (fail-open)
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `Retry-After` for blocked requests (`429`).
 

@@ -17,7 +17,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       replace={router.replace}
       onSessionChange={() => router.refresh()}
       Link={Link}
-      social={{ providers: ["google"] }}
+      social={{ providers: ["google","github"] }}
+     
+
     >
       {children}
     </NeonAuthUIProvider>

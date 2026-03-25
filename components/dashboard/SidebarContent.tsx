@@ -1,14 +1,6 @@
-"use client";
-
 import Link from "next/link";
 import {
-  Code,
-  Bot,
-  FileText,
-  Terminal,
   File,
-  Image,
-  Link as LinkIcon,
   Star,
   Folder,
   Settings,
@@ -22,49 +14,75 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { itemTypeToSlug } from "@/lib/utils";
+import { itemTypeToSlug, cn } from "@/lib/utils";
+import { authServer } from "@/lib/auth/server";
 import {
-  currentUser,
-  itemTypes,
-  collections,
-  items,
-} from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+  getCachedSystemItemTypes,
+  getCachedUserCollections,
+  getCachedUserItems,
+  getCachedUserById,
+} from "@/lib/db/queries";
+import {
+  FALLBACK_ITEM_TYPE_ICON,
+  itemTypeIcons,
+  itemTypeTextColors,
+} from "@/lib/dashboard/item-type-meta";
+import type {
+  CollectionInfo,
+  ItemInfo,
+  ItemTypeInfo,
+  UserInfo,
+} from "@/types/dashboard";
 
-const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  code: Code,
-  bot: Bot,
-  "file-text": FileText,
-  terminal: Terminal,
-  file: File,
-  image: Image,
-  link: LinkIcon,
-};
-
-const typeColors: Record<string, string> = {
-  code: "text-blue-400",
-  bot: "text-purple-400",
-  "file-text": "text-blue-400",
-  terminal: "text-amber-400",
-  file: "text-gray-400",
-  image: "text-pink-400",
-  link: "text-teal-400",
-};
-
-function getItemCountByType(typeId: string): number {
-  return items.filter((i) => i.typeId === typeId).length;
+interface SidebarContentProps {
+  className?: string;
+  prefetchedData?: {
+    itemTypes: ItemTypeInfo[];
+    collections: CollectionInfo[];
+    items: ItemInfo[];
+    user: UserInfo | null;
+  };
 }
 
-function getItemCountByCollection(collectionId: string): number {
-  return items.filter((i) => i.collectionId === collectionId).length;
-}
+export async function SidebarContent({ className, prefetchedData }: SidebarContentProps) {
+  const { data: session } = await authServer.getSession();
+  const userId = session?.user?.id ?? null;
 
-const favoriteCollections = collections.filter((c) => c.isFavorite);
-const allCollections = collections
-  .filter((c) => !c.isFavorite)
-  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  let user = prefetchedData?.user ?? null;
+  let itemTypes = prefetchedData?.itemTypes ?? [];
+  let collections = prefetchedData?.collections ?? [];
+  let items = prefetchedData?.items ?? [];
 
-export function SidebarContent({ className }: { className?: string }) {
+  if (userId && !prefetchedData) {
+    const [itemTypesResult, collectionsResult, itemsResult, userResult] = await Promise.all([
+      getCachedSystemItemTypes(),
+      getCachedUserCollections(userId),
+      getCachedUserItems(userId),
+      getCachedUserById(userId),
+    ]);
+    itemTypes = itemTypesResult;
+    collections = collectionsResult;
+    items = itemsResult;
+    user = userResult;
+  }
+
+  const itemCountByType = new Map<string, number>();
+  const itemCountByCollection = new Map<string, number>();
+  for (const item of items) {
+    itemCountByType.set(item.typeId, (itemCountByType.get(item.typeId) ?? 0) + 1);
+    if (item.collectionId) {
+      itemCountByCollection.set(
+        item.collectionId,
+        (itemCountByCollection.get(item.collectionId) ?? 0) + 1
+      );
+    }
+  }
+
+  const favoriteCollections = collections.filter((c) => c.isFavorite);
+  const allCollections = collections
+    .filter((c) => !c.isFavorite)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
   return (
     <div className={cn("flex h-full flex-col bg-sidebar", className)}>
       {/* Logo */}
@@ -85,11 +103,12 @@ export function SidebarContent({ className }: { className?: string }) {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1 space-y-0.5 pl-2">
               {itemTypes.map((type) => {
-                const Icon = typeIcons[type.icon] ?? File;
+                const iconKey = type.icon in itemTypeIcons ? type.icon : FALLBACK_ITEM_TYPE_ICON;
+                const Icon = itemTypeIcons[iconKey] ?? File;
                 const slug = itemTypeToSlug(type.name);
-                const count = getItemCountByType(type.id);
+                const count = itemCountByType.get(type.id) ?? 0;
                 const displayName = type.name === "URL" ? "Links" : `${type.name}s`;
-                const colorClass = typeColors[type.icon] ?? "text-muted-foreground";
+                const colorClass = itemTypeTextColors[iconKey] ?? "text-muted-foreground";
                 return (
                   <Link
                     key={type.id}
@@ -135,7 +154,7 @@ export function SidebarContent({ className }: { className?: string }) {
                 All Collections
               </div>
               {allCollections.map((col) => {
-                const count = getItemCountByCollection(col.id);
+                const count = itemCountByCollection.get(col.id) ?? 0;
                 return (
                   <Link
                     key={col.id}
@@ -160,18 +179,18 @@ export function SidebarContent({ className }: { className?: string }) {
         <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-sidebar-accent transition-colors">
           <Avatar className="size-9 bg-muted">
             <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-              {currentUser.name
+              {user?.name
                 .split(" ")
                 .map((n) => n[0])
-                .join("")}
+                .join("") ?? "?"}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {currentUser.name}
+              {user?.name ?? "Guest"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {currentUser.email}
+              {user?.email ?? "Sign in to save your items"}
             </p>
           </div>
           <button

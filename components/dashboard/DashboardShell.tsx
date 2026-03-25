@@ -8,18 +8,20 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TopBar } from "@/components/dashboard/TopBar";
-import { SidebarContent } from "@/components/dashboard/SidebarContent";
 import { cn } from "@/lib/utils";
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+interface DashboardShellProps {
+  children: React.ReactNode;
+  sidebar: React.ReactNode;
+}
+
+export function DashboardShell({ children, sidebar }: DashboardShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <TopBar
-        
-      />
+      <TopBar onToggleMobileSidebar={() => setMobileMenuOpen(true)} />
       <div className="flex flex-1">
         <aside
           className={cn(
@@ -50,7 +52,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <PanelLeft className="size-4 rotate-180" />
                 </Button>
               </div>
-              <SidebarContent className="flex-1" />
+              <div className="flex-1 overflow-auto">
+                {sidebar}
+              </div>
             </>
           )}
         </aside>
@@ -62,7 +66,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             showCloseButton={true}
           >
             <div className="flex h-full flex-col pt-12">
-              <SidebarContent />
+              {sidebar}
             </div>
           </SheetContent>
         </Sheet>

@@ -1,50 +1,14 @@
 import Link from "next/link";
-import {
-  Code,
-  Bot,
-  FileText,
-  Terminal,
-  File,
-  Image,
-  Link as LinkIcon,
-  Star,
-  Pin,
-} from "lucide-react";
+import { Star, Pin, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { itemTypes, itemTags, tags } from "@/lib/mock-data";
-import { getTagNamesForItem } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  code: Code,
-  bot: Bot,
-  "file-text": FileText,
-  terminal: Terminal,
-  file: File,
-  image: Image,
-  link: LinkIcon,
-};
-
-const typeBgColors: Record<string, string> = {
-  code: "bg-blue-500/15",
-  bot: "bg-purple-500/15",
-  "file-text": "bg-blue-500/15",
-  terminal: "bg-amber-500/15",
-  file: "bg-gray-500/15",
-  image: "bg-pink-500/15",
-  link: "bg-teal-500/15",
-};
-
-const typeIconColors: Record<string, string> = {
-  code: "text-blue-400",
-  bot: "text-purple-400",
-  "file-text": "text-blue-400",
-  terminal: "text-amber-400",
-  file: "text-gray-400",
-  image: "text-pink-400",
-  link: "text-teal-400",
-};
+import {
+  FALLBACK_ITEM_TYPE_ICON,
+  itemTypeBgColors,
+  itemTypeIcons,
+  itemTypeTextColors,
+} from "@/lib/dashboard/item-type-meta";
+import type { ItemTypeInfo, TagInfo, ItemTagInfo } from "@/types/dashboard";
 
 export interface ItemForList {
   id: string;
@@ -56,13 +20,23 @@ export interface ItemForList {
   createdAt: Date;
 }
 
-function getTypeInfo(typeId: string) {
+interface ItemListRowProps {
+  item: ItemForList;
+  showFavorite?: boolean;
+  className?: string;
+  itemTypes: ItemTypeInfo[];
+  tags?: TagInfo[];
+  itemTags?: ItemTagInfo[];
+  tagNamesByItemId?: Map<string, string[]>;
+}
+
+function getTypeInfo(typeId: string, itemTypes: ItemTypeInfo[]) {
   const type = itemTypes.find((t) => t.id === typeId);
-  const iconName = type?.icon ?? "file";
+  const iconName = type?.icon ?? FALLBACK_ITEM_TYPE_ICON;
   return {
-    Icon: typeIcons[iconName] ?? FileText,
-    bgColor: typeBgColors[iconName] ?? "bg-muted",
-    iconColor: typeIconColors[iconName] ?? "text-muted-foreground",
+    Icon: itemTypeIcons[iconName] ?? FileText,
+    bgColor: itemTypeBgColors[iconName] ?? "bg-muted",
+    iconColor: itemTypeTextColors[iconName] ?? "text-muted-foreground",
   };
 }
 
@@ -77,13 +51,27 @@ export function ItemListRow({
   item,
   showFavorite = true,
   className,
-}: {
-  item: ItemForList;
-  showFavorite?: boolean;
-  className?: string;
-}) {
-  const { Icon, bgColor, iconColor } = getTypeInfo(item.typeId);
-  const tagNames = getTagNamesForItem(item.id, itemTags, tags);
+  itemTypes,
+  tags = [],
+  itemTags = [],
+  tagNamesByItemId,
+}: ItemListRowProps) {
+  const { Icon, bgColor, iconColor } = getTypeInfo(item.typeId, itemTypes);
+  const computedTagNamesByItemId = tagNamesByItemId ?? (() => {
+    const namesByTagId = new Map(tags.map((tag) => [tag.id, tag.name]));
+    const result = new Map<string, string[]>();
+    for (const itemTag of itemTags) {
+      const tagName = namesByTagId.get(itemTag.tagId);
+      if (!tagName) {
+        continue;
+      }
+      const names = result.get(itemTag.itemId) ?? [];
+      names.push(tagName);
+      result.set(itemTag.itemId, names);
+    }
+    return result;
+  })();
+  const tagNames = computedTagNamesByItemId.get(item.id) ?? [];
 
   return (
     <Link
