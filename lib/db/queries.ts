@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@/db";
@@ -15,6 +15,7 @@ import type {
   ItemTypeInfo,
   CollectionInfo,
   ItemInfo,
+  ItemDrawerData,
   TagInfo,
   ItemTagInfo,
   UserInfo,
@@ -23,6 +24,21 @@ import type {
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 250;
+
+const SEARCH_ITEMS_DEFAULT_LIMIT = 20;
+const SEARCH_ITEMS_MAX_LIMIT = 50;
+
+/** Escape `%`, `_`, and `\` for PostgreSQL ILIKE … ESCAPE '\\'. */
+export function escapeIlikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+export interface ItemSearchResult {
+  id: string;
+  title: string;
+  typeId: string;
+  collectionId: string | null;
+}
 
 interface QueryOptions {
   limit?: number;
@@ -109,6 +125,9 @@ export async function getUserItems(
       typeId: true,
       collectionId: true,
       language: true,
+      contentType: true,
+      fileUrl: true,
+      fileName: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -123,9 +142,58 @@ export async function getUserItems(
     typeId: i.typeId,
     collectionId: i.collectionId,
     language: i.language,
+    contentType: i.contentType as ItemInfo["contentType"],
+    fileUrl: i.fileUrl,
+    fileName: i.fileName,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
   }));
+}
+
+/**
+ * Search items by title or description (case-insensitive), scoped to user.
+ */
+export async function searchUserItems(
+  userId: string,
+  query: string,
+  options: QueryOptions = {}
+): Promise<ItemSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  const rawLimit =
+    options.limit !== undefined && !Number.isNaN(options.limit)
+      ? Math.floor(options.limit)
+      : SEARCH_ITEMS_DEFAULT_LIMIT;
+  const effectiveLimit = Math.min(Math.max(rawLimit, 1), SEARCH_ITEMS_MAX_LIMIT);
+  const pattern = `%${escapeIlikePattern(trimmed)}%`;
+
+  const result = await db
+    .select({
+      id: items.id,
+      title: items.title,
+      typeId: items.typeId,
+      collectionId: items.collectionId,
+    })
+    .from(items)
+    .where(
+      and(
+        eq(items.userId, userId),
+        sql`(
+          ${items.title} ILIKE ${pattern} ESCAPE ${"\\"}
+          OR (
+            ${items.description} IS NOT NULL
+            AND ${items.description} ILIKE ${pattern} ESCAPE ${"\\"}
+          )
+        )`
+      )
+    )
+    .orderBy(desc(items.updatedAt))
+    .limit(effectiveLimit);
+
+  return result;
 }
 
 /**
@@ -149,6 +217,9 @@ export async function getUserItemsByType(
       typeId: true,
       collectionId: true,
       language: true,
+      contentType: true,
+      fileUrl: true,
+      fileName: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -163,6 +234,9 @@ export async function getUserItemsByType(
     typeId: i.typeId,
     collectionId: i.collectionId,
     language: i.language,
+    contentType: i.contentType as ItemInfo["contentType"],
+    fileUrl: i.fileUrl,
+    fileName: i.fileName,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
   }));
@@ -183,6 +257,9 @@ export async function getItemById(userId: string, itemId: string): Promise<ItemI
       typeId: true,
       collectionId: true,
       language: true,
+      contentType: true,
+      fileUrl: true,
+      fileName: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -199,8 +276,95 @@ export async function getItemById(userId: string, itemId: string): Promise<ItemI
     typeId: result.typeId,
     collectionId: result.collectionId,
     language: result.language,
+    contentType: result.contentType as ItemInfo["contentType"],
+    fileUrl: result.fileUrl,
+    fileName: result.fileName,
     createdAt: result.createdAt,
     updatedAt: result.updatedAt,
+  };
+}
+
+/**
+ * Get full item data for the dashboard right drawer.
+ * Note: File/image types are supported. File items are read-only in the drawer UI.
+ */
+export async function getItemDrawerData(
+  userId: string,
+  itemId: string
+): Promise<ItemDrawerData | null> {
+  const itemResult = await db.query.items.findFirst({
+    where: and(eq(items.userId, userId), eq(items.id, itemId)),
+    columns: {
+      id: true,
+      title: true,
+      description: true,
+      isFavorite: true,
+      isPinned: true,
+      typeId: true,
+      contentType: true,
+      content: true,
+      url: true,
+      language: true,
+      fileUrl: true,
+      fileName: true,
+      fileSize: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!itemResult) return null;
+
+  const typeResult = await db.query.itemTypes.findFirst({
+    where: eq(itemTypes.id, itemResult.typeId),
+    columns: {
+      id: true,
+      name: true,
+      icon: true,
+      color: true,
+      isSystem: true,
+    },
+  });
+
+  if (!typeResult) {
+    // Data integrity issue: item points to a missing type.
+    return null;
+  }
+
+  const tagRows = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+    })
+    .from(itemTags)
+    .innerJoin(tags, eq(tags.id, itemTags.tagId))
+    .where(and(eq(itemTags.itemId, itemId), eq(tags.userId, userId)))
+    .orderBy(tags.name);
+
+  return {
+    id: itemResult.id,
+    title: itemResult.title,
+    description: itemResult.description,
+    isFavorite: itemResult.isFavorite,
+    isPinned: itemResult.isPinned,
+    typeId: itemResult.typeId,
+    contentType: itemResult.contentType as ItemDrawerData["contentType"],
+    content: itemResult.content,
+    url: itemResult.url,
+    language: itemResult.language,
+    fileUrl: itemResult.fileUrl,
+    fileName: itemResult.fileName,
+    fileSize: itemResult.fileSize,
+    createdAt: itemResult.createdAt,
+    updatedAt: itemResult.updatedAt,
+    type: {
+      id: typeResult.id,
+      name: typeResult.name,
+      icon: typeResult.icon as ItemTypeIcon,
+      color: typeResult.color,
+      isSystem: typeResult.isSystem,
+    },
+    tags: tagRows satisfies TagInfo[],
   };
 }
 
@@ -253,6 +417,103 @@ export async function getUserTags(
   return result.map((t) => ({
     id: t.id,
     name: t.name,
+  }));
+}
+
+export async function getUserTagById(userId: string, tagId: string): Promise<TagInfo | null> {
+  const result = await db.query.tags.findFirst({
+    where: and(eq(tags.userId, userId), eq(tags.id, tagId)),
+    columns: { id: true, name: true },
+  });
+  if (!result) return null;
+  return { id: result.id, name: result.name };
+}
+
+export async function getUserItemsByCollection(
+  userId: string,
+  collectionId: string,
+  options: QueryOptions = {}
+): Promise<ItemInfo[]> {
+  const rows = await db
+    .select({
+      id: items.id,
+      title: items.title,
+      description: items.description,
+      isFavorite: items.isFavorite,
+      isPinned: items.isPinned,
+      typeId: items.typeId,
+      collectionId: items.collectionId,
+      language: items.language,
+      contentType: items.contentType,
+      fileUrl: items.fileUrl,
+      fileName: items.fileName,
+      createdAt: items.createdAt,
+      updatedAt: items.updatedAt,
+    })
+    .from(items)
+    .where(and(eq(items.userId, userId), eq(items.collectionId, collectionId)))
+    .orderBy(desc(items.createdAt))
+    .limit(resolveLimit(options.limit));
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    isFavorite: r.isFavorite,
+    isPinned: r.isPinned,
+    typeId: r.typeId,
+    collectionId: r.collectionId,
+    language: r.language,
+    contentType: r.contentType as ItemInfo["contentType"],
+    fileUrl: r.fileUrl,
+    fileName: r.fileName,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }));
+}
+
+export async function getUserItemsByTag(
+  userId: string,
+  tagId: string,
+  options: QueryOptions = {}
+): Promise<ItemInfo[]> {
+  const rows = await db
+    .select({
+      id: items.id,
+      title: items.title,
+      description: items.description,
+      isFavorite: items.isFavorite,
+      isPinned: items.isPinned,
+      typeId: items.typeId,
+      collectionId: items.collectionId,
+      language: items.language,
+      contentType: items.contentType,
+      fileUrl: items.fileUrl,
+      fileName: items.fileName,
+      createdAt: items.createdAt,
+      updatedAt: items.updatedAt,
+    })
+    .from(items)
+    .innerJoin(itemTags, eq(itemTags.itemId, items.id))
+    .innerJoin(tags, eq(tags.id, itemTags.tagId))
+    .where(and(eq(items.userId, userId), eq(tags.userId, userId), eq(tags.id, tagId)))
+    .orderBy(desc(items.createdAt))
+    .limit(resolveLimit(options.limit));
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    isFavorite: r.isFavorite,
+    isPinned: r.isPinned,
+    typeId: r.typeId,
+    collectionId: r.collectionId,
+    language: r.language,
+    contentType: r.contentType as ItemInfo["contentType"],
+    fileUrl: r.fileUrl,
+    fileName: r.fileName,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
   }));
 }
 

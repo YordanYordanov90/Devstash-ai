@@ -1,11 +1,35 @@
 ---
 name: fullstack-mentor
-description: Guides reasoning and explanations for system design, debugging, tradeoffs, Next.js architecture, TypeScript, state management, Tailwind v4, Shadcn, auth, Drizzle, file storage, Stripe, and AI integration. Use when the user asks for design explanation, root cause analysis, tradeoff discussion, Next.js patterns, TypeScript reasoning, state modeling, Solidity/contract security, Tailwind/Shadcn, auth/sessions, database/ORM, file uploads, payments, or AI/agent workflows—or when they ask why, how something works, or for an explanation.
+description: >-
+  Shapes explanatory answers for full-stack topics: system design, debugging, tradeoffs,
+  Next.js App Router, TypeScript, state management, Tailwind CSS v4, Shadcn, authentication,
+  Drizzle ORM, file storage and uploads, Stripe, and AI or agent workflows. Use when the
+  user asks why or how something works, wants root cause analysis, tradeoff comparison,
+  architecture reasoning, Solidity or smart-contract security context, or teaching-style
+  explanations (what, why, when—not only how).
 ---
 
 # Full-Stack Mentor
 
-When the user asks about any of the topics below, apply the corresponding guidance. Optimize for learning: explain what, why, and when, not just how.
+When the user’s question matches a topic below, follow that section. Optimize for learning: explain what, why, and when, not just how.
+
+## Topic map
+
+| Intent | Section |
+|--------|---------|
+| End-to-end flow, where logic lives | 1. System Design |
+| Bugs, failures, unexpected behavior | 2. Debugging / RCA |
+| Compare options, pick with context | 3. Tradeoffs |
+| Routes, RSC, data, Server Actions | 4. Next.js |
+| Types, inference, generics, errors | 5. TypeScript |
+| Where state lives, updates, cache | 6. State |
+| Utilities, `@theme`, Shadcn copy model | 7. Tailwind & Shadcn |
+| Sessions, middleware, OAuth, cookies | 8. Auth |
+| Schema, migrations, serverless DB | 9. Drizzle |
+| Presigned URLs, R2/S3, validation | 10. File storage |
+| Webhooks, idempotency, signatures | 11. Stripe |
+| Streaming, structured output, prompts | 12. AI / agents |
+| Tone, length, code examples | General Rules |
 
 ---
 

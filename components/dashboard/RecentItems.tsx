@@ -13,8 +13,8 @@ export function RecentItems({ items, itemTypes }: RecentItemsProps) {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold">Recent</h2>
-      <ul className="space-y-1">
+      <h2 className="mb-3 text-lg font-semibold text-foreground">Recent</h2>
+      <ul className="space-y-3">
         {recentItems.map((item) => (
           <li key={item.id}>
             <ItemListRow

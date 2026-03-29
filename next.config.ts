@@ -45,6 +45,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Large multipart uploads to /api/upload (same-origin, no R2 CORS).
+    proxyClientMaxBodySize: "12mb",
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
   async headers() {
     return [
       {

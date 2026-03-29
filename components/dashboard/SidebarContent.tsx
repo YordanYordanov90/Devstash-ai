@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   File,
   Star,
@@ -16,10 +15,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { itemTypeToSlug, cn } from "@/lib/utils";
 import { authServer } from "@/lib/auth/server";
+import { SidebarNavLink } from "@/components/dashboard/SidebarNavLink";
 import {
   getCachedSystemItemTypes,
   getCachedUserCollections,
   getCachedUserItems,
+  getCachedUserTags,
   getCachedUserById,
 } from "@/lib/db/queries";
 import {
@@ -31,8 +32,10 @@ import type {
   CollectionInfo,
   ItemInfo,
   ItemTypeInfo,
+  TagInfo,
   UserInfo,
 } from "@/types/dashboard";
+import Link from 'next/link';
 
 interface SidebarContentProps {
   className?: string;
@@ -40,6 +43,7 @@ interface SidebarContentProps {
     itemTypes: ItemTypeInfo[];
     collections: CollectionInfo[];
     items: ItemInfo[];
+    tags: TagInfo[];
     user: UserInfo | null;
   };
 }
@@ -52,17 +56,21 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
   let itemTypes = prefetchedData?.itemTypes ?? [];
   let collections = prefetchedData?.collections ?? [];
   let items = prefetchedData?.items ?? [];
+  let userTags = prefetchedData?.tags ?? [];
 
   if (userId && !prefetchedData) {
-    const [itemTypesResult, collectionsResult, itemsResult, userResult] = await Promise.all([
+    const [itemTypesResult, collectionsResult, itemsResult, tagsResult, userResult] =
+      await Promise.all([
       getCachedSystemItemTypes(),
       getCachedUserCollections(userId),
       getCachedUserItems(userId),
+      getCachedUserTags(userId),
       getCachedUserById(userId),
     ]);
     itemTypes = itemTypesResult;
     collections = collectionsResult;
     items = itemsResult;
+    userTags = tagsResult;
     user = userResult;
   }
 
@@ -84,9 +92,9 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
-    <div className={cn("flex h-full flex-col bg-sidebar", className)}>
+    <div className={cn("flex h-full flex-col bg-sidebar/80 backdrop-blur supports-backdrop-filter:bg-sidebar/70", className)}>
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
+      <div className="flex h-14 items-center gap-2 border-b border-white/10 px-4">
         <div className="flex size-8 items-center justify-center rounded-lg bg-primary/20">
           <Layers className="size-5 text-primary" />
         </div>
@@ -97,7 +105,7 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
         <nav className="flex flex-col gap-1 p-3">
           {/* Types Section */}
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <span>Types</span>
               <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
@@ -110,17 +118,18 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
                 const displayName = type.name === "URL" ? "Links" : `${type.name}s`;
                 const colorClass = itemTypeTextColors[iconKey] ?? "text-muted-foreground";
                 return (
-                  <Link
+                  <SidebarNavLink
                     key={type.id}
                     href={`/items/${slug}`}
-                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                   >
                     <Icon className={cn("size-4 shrink-0", colorClass)} />
                     <span className="truncate flex-1">{displayName}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">
                       {count}
                     </span>
-                  </Link>
+                  </SidebarNavLink>
                 );
               })}
             </CollapsibleContent>
@@ -128,25 +137,28 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
 
           {/* Collections Section */}
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <span>Collections</span>
               <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1 space-y-1 pl-2">
               {/* Favorites */}
-              <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Favorites
-              </div>
+              <Link href="/favorites">
+                <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Favorites
+                </div>
+              </Link>
               {favoriteCollections.map((col) => (
-                <Link
+                <SidebarNavLink
                   key={col.id}
                   href={`/collections/${col.id}`}
-                  className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                 >
                   <Folder className="size-4 shrink-0 text-muted-foreground" />
                   <span className="truncate flex-1">{col.name}</span>
                   <Star className="size-3.5 shrink-0 fill-amber-500 text-amber-500" />
-                </Link>
+                </SidebarNavLink>
               ))}
 
               {/* All Collections */}
@@ -156,26 +168,48 @@ export async function SidebarContent({ className, prefetchedData }: SidebarConte
               {allCollections.map((col) => {
                 const count = itemCountByCollection.get(col.id) ?? 0;
                 return (
-                  <Link
+                  <SidebarNavLink
                     key={col.id}
                     href={`/collections/${col.id}`}
-                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                   >
                     <Folder className="size-4 shrink-0 text-muted-foreground" />
                     <span className="truncate flex-1">{col.name}</span>
                     <span className="text-xs text-muted-foreground tabular-nums">
                       {count}
                     </span>
-                  </Link>
+                  </SidebarNavLink>
                 );
               })}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Tags Section */}
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <span>Tags</span>
+              <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-1 space-y-0.5 pl-2">
+              <SidebarNavLink
+                href="/tags"
+                className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                exact={false}
+              >
+                <span className="truncate flex-1">All tags</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {userTags.length}
+                </span>
+              </SidebarNavLink>
             </CollapsibleContent>
           </Collapsible>
         </nav>
       </ScrollArea>
 
       {/* User Profile */}
-      <div className="border-t border-sidebar-border p-3">
+      <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-sidebar-accent transition-colors">
           <Avatar className="size-9 bg-muted">
             <AvatarFallback className="text-xs bg-muted text-muted-foreground">

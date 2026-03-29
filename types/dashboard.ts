@@ -30,6 +30,8 @@ export interface CollectionInfo {
   createdAt: Date;
 }
 
+export type ItemContentType = "text" | "file" | "url";
+
 export interface ItemInfo {
   id: string;
   title: string;
@@ -39,6 +41,9 @@ export interface ItemInfo {
   typeId: string;
   collectionId: string | null;
   language: string | null;
+  contentType: ItemContentType;
+  fileUrl: string | null;
+  fileName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,4 +72,24 @@ export interface DashboardData {
   items: ItemInfo[];
   tags: TagInfo[];
   itemTags: ItemTagInfo[];
+}
+
+export interface ItemDrawerData {
+  id: string;
+  title: string;
+  description: string | null;
+  isFavorite: boolean;
+  isPinned: boolean;
+  typeId: string;
+  contentType: ItemContentType;
+  content: string | null;
+  url: string | null;
+  language: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  type: ItemTypeInfo;
+  tags: TagInfo[];
 }

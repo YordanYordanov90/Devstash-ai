@@ -32,7 +32,11 @@ export function StatsCards({ items, collections }: StatsCardsProps) {
           "favoriteCollections",
         ] as const
       ).map((key) => (
-        <Card key={key} size="sm">
+        <Card
+          key={key}
+          size="sm"
+          className="border border-white/10 bg-card/60 ring-0 shadow-sm backdrop-blur"
+        >
           <CardHeader className="pb-1">
             <span className="text-sm font-medium text-muted-foreground">
               {statLabels[key]}
