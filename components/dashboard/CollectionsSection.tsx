@@ -147,7 +147,7 @@ export function CollectionsSection({ collections, items, itemTypes }: Collection
               <Card 
                 size="sm" 
                 className={cn(
-                  "h-full transition-all hover:bg-muted/50 border-l-4",
+                  "h-full border border-white/10 bg-card/60 ring-0 shadow-sm backdrop-blur transition-colors hover:bg-card/70 border-l-4",
                   borderColor
                 )}
               >

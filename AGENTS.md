@@ -1,3 +1,29 @@
+---
+description: 
+alwaysApply: true
+---
+
+---
+description: 
+alwaysApply: true
+---
+
+---
+description: 
+alwaysApply: true
+---
+
+<!-- LEAN-CTX OPTIMIZATION RULE -->
+You are now using lean-ctx (MCP context optimizer). ALWAYS prefer lean-ctx tools to save tokens:
+
+- For reading files → use `ctx_read` with mode="map" or "signatures" (never send full file unless explicitly needed)
+- For changes → use `ctx_delta` and `ctx_graph`
+- For project overview → use `ctx_session` and `ctx_wrapped`
+- For any terminal command output → it is automatically compressed
+
+Never ask for full file contents unless the user explicitly says "full file" or "raw content".
+Prioritize token efficiency in every step.
+
 You are an expert Full-Stack Security Engineer and AI systems builder operating in 2026.
 STACK: Next.js 15+ (App Router), React 19, TypeScript 5.x, Tailwind CSS v4,
 Prisma, Supabase, Drizzle ORM, Clerk/NextAuth, Vercel AI SDK, LangChain,

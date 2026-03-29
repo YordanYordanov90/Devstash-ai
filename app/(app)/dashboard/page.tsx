@@ -3,7 +3,7 @@ import { PinnedItems } from "@/components/dashboard/PinnedItems";
 import { RecentItems } from "@/components/dashboard/RecentItems";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { authServer } from "@/lib/auth/server";
-import { getDashboardData } from "@/lib/db/queries";
+import { getDashboardData, getItemDrawerData } from "@/lib/db/queries";
 import type {
   CollectionInfo,
   ItemInfo,
@@ -11,16 +11,28 @@ import type {
   ItemTypeInfo,
   TagInfo,
 } from "@/types/dashboard";
+import { ItemDrawer } from "@/components/dashboard/ItemDrawer";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = await searchParams;
   const { data: session } = await authServer.getSession();
   const userId = session?.user?.id ?? null;
+  const itemId =
+    typeof resolvedSearchParams?.item === "string" &&
+    resolvedSearchParams.item.trim().length > 0
+      ? resolvedSearchParams.item
+      : null;
 
   let itemTypes: ItemTypeInfo[] = [];
   let collections: CollectionInfo[] = [];
   let items: ItemInfo[] = [];
   let tags: TagInfo[] = [];
   let itemTags: ItemTagInfo[] = [];
+  let drawerItem = null;
 
   if (userId) {
     const dashboardData = await getDashboardData(userId);
@@ -29,6 +41,10 @@ export default async function DashboardPage() {
     items = dashboardData.items;
     tags = dashboardData.tags;
     itemTags = dashboardData.itemTags;
+
+    if (itemId) {
+      drawerItem = await getItemDrawerData(userId, itemId);
+    }
   }
 
   return (
@@ -56,6 +72,13 @@ export default async function DashboardPage() {
         itemTypes={itemTypes}
         tags={tags}
         itemTags={itemTags}
+      />
+
+      <ItemDrawer
+        key={itemId ?? ""}
+        isOpen={Boolean(itemId)}
+        itemTypes={itemTypes}
+        item={drawerItem}
       />
     </div>
   );

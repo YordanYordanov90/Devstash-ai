@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { authServer } from "@/lib/auth/server";
 import { AuthProvider } from "./auth-provider";
+import { SonnerToaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,7 +36,10 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`dark ${poppins.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <SonnerToaster />
+        </AuthProvider>
       </body>
     </html>
   );
