@@ -6,14 +6,12 @@ import { authServer } from "@/lib/auth/server";
 import {
   getCollectionById,
   getItemDrawerData,
-  getItemTagsForItems,
   getSystemItemTypes,
   getUserItemsByCollection,
-  getUserTags,
 } from "@/lib/db/queries";
-import { ItemListRow } from "@/components/dashboard/ItemList";
+import { ItemGalleryCard } from "@/components/dashboard/ItemGalleryCard";
 import { ItemDrawer } from "@/components/dashboard/ItemDrawer";
-import type { ItemInfo, ItemTagInfo, ItemTypeInfo, TagInfo } from "@/types/dashboard";
+import type { ItemInfo, ItemTypeInfo } from "@/types/dashboard";
 
 const collectionIdParamSchema = z.object({
   id: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/),
@@ -71,24 +69,10 @@ export default async function CollectionDetailPage({
       ? resolvedSearchParams.item
       : null;
 
-  const [itemTypes, items, allTags] = await Promise.all([
+  const [itemTypes, items] = await Promise.all([
     getSystemItemTypes(),
     getUserItemsByCollection(userId, collectionId, { limit: 200 }),
-    getUserTags(userId, { limit: 250 }),
   ]);
-
-  const itemIds = items.map((i) => i.id);
-  const itemTags = (await getItemTagsForItems(itemIds)) satisfies ItemTagInfo[];
-
-  const tagNameByTagId = new Map(allTags.map((t) => [t.id, t.name]));
-  const tagNamesByItemId = new Map<string, string[]>();
-  for (const it of itemTags) {
-    const name = tagNameByTagId.get(it.tagId);
-    if (!name) continue;
-    const existing = tagNamesByItemId.get(it.itemId) ?? [];
-    existing.push(name);
-    tagNamesByItemId.set(it.itemId, existing);
-  }
 
   const drawerItem = itemId ? await getItemDrawerData(userId, itemId) : null;
 
@@ -126,15 +110,15 @@ export default async function CollectionDetailPage({
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul
+          role="list"
+          className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {items.map((it) => (
             <li key={it.id}>
-              <ItemListRow
+              <ItemGalleryCard
                 item={it as ItemInfo}
                 itemTypes={itemTypes as ItemTypeInfo[]}
-                tags={allTags as TagInfo[]}
-                itemTags={itemTags}
-                tagNamesByItemId={tagNamesByItemId}
               />
             </li>
           ))}

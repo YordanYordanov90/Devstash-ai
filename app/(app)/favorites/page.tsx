@@ -8,9 +8,9 @@ import {
   getUserItems,
   getUserTags,
 } from "@/lib/db/queries";
-import { ItemListRow } from "@/components/dashboard/ItemList";
+import { ItemGalleryCard } from "@/components/dashboard/ItemGalleryCard";
 import { ItemDrawer } from "@/components/dashboard/ItemDrawer";
-import type { ItemInfo, ItemTagInfo, ItemTypeInfo, TagInfo } from "@/types/dashboard";
+import type { ItemInfo, ItemTagInfo, ItemTypeInfo } from "@/types/dashboard";
 
 export default async function FavoritesPage({
   searchParams,
@@ -77,15 +77,16 @@ export default async function FavoritesPage({
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground">No favorite items yet.</p>
       ) : (
-        <ul className="space-y-3">
+        <ul
+          role="list"
+          className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {items.map((it) => (
             <li key={it.id}>
-              <ItemListRow
+              <ItemGalleryCard
                 item={it as ItemInfo}
                 itemTypes={itemTypes as ItemTypeInfo[]}
-                tags={tags as TagInfo[]}
-                itemTags={itemTags}
-                tagNamesByItemId={tagNamesByItemId}
+                tagNames={tagNamesByItemId.get(it.id) ?? []}
               />
             </li>
           ))}

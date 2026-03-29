@@ -9,10 +9,10 @@ import {
   getUserItemsByType,
   getUserTags,
 } from "@/lib/db/queries";
-import { ItemListRow } from "@/components/dashboard/ItemList";
+import { ItemGalleryCard } from "@/components/dashboard/ItemGalleryCard";
 import { ItemDrawer } from "@/components/dashboard/ItemDrawer";
 import { itemTypeToSlug } from "@/lib/utils";
-import type { ItemInfo, ItemTagInfo, ItemTypeInfo, TagInfo } from "@/types/dashboard";
+import type { ItemInfo, ItemTagInfo, ItemTypeInfo } from "@/types/dashboard";
 
 const itemSlugParamSchema = z.object({
   slug: z.string().min(1).max(128).regex(/^[a-z0-9-]+$/),
@@ -119,15 +119,16 @@ export default async function ItemsByTypePage({
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul
+          role="list"
+          className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {items.map((it) => (
             <li key={it.id}>
-              <ItemListRow
+              <ItemGalleryCard
                 item={it as ItemInfo}
                 itemTypes={itemTypes as ItemTypeInfo[]}
-                tags={allTags as TagInfo[]}
-                itemTags={itemTags}
-                tagNamesByItemId={tagNamesByItemId}
+                tagNames={tagNamesByItemId.get(it.id) ?? []}
               />
             </li>
           ))}

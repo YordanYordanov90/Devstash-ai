@@ -1,5 +1,5 @@
 import { Pin } from "lucide-react";
-import { ItemListRow } from "./ItemList";
+import { ItemGalleryCard } from "./ItemGalleryCard";
 import type { ItemInfo, ItemTagInfo, ItemTypeInfo, TagInfo } from "@/types/dashboard";
 
 interface PinnedItemsProps {
@@ -46,15 +46,16 @@ export function PinnedItems({
         <Pin className="size-4 text-muted-foreground" />
         <h2 className="text-lg font-semibold text-foreground">Pinned</h2>
       </div>
-      <ul className="space-y-3">
+      <ul
+        role="list"
+        className="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3"
+      >
         {pinnedItems.map((item) => (
           <li key={item.id}>
-            <ItemListRow
+            <ItemGalleryCard
               item={item}
               itemTypes={itemTypes}
-              tags={tags}
-              itemTags={itemTags}
-              tagNamesByItemId={tagNamesByItemId}
+              tagNames={tagNamesByItemId.get(item.id) ?? []}
             />
           </li>
         ))}
