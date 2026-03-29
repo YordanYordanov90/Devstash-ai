@@ -32,16 +32,16 @@ export function CollectionDialog({ open, onOpenChange }: CollectionDialogProps) 
   const [description, setDescription] = useState("");
   const [state, action] = useActionState(createCollectionAction, initialActionState);
   const formRef = useRef<HTMLFormElement>(null);
+  const handledSuccessRef = useRef(false);
 
   useEffect(() => {
-    if (state.success === true && hasSubmitted(state)) {
-      toast.success("Collection created");
-      setName("");
-      setDescription("");
-      onOpenChange(false);
-      window.location.reload();
-    }
-  }, [state, onOpenChange]);
+    if (state.success !== true || !hasSubmitted(state)) return;
+    if (handledSuccessRef.current) return;
+    handledSuccessRef.current = true;
+    toast.success("Collection created");
+    // Full reload remounts the tree; avoid setState/onOpenChange here (React 19: no sync setState in effects).
+    window.location.reload();
+  }, [state]);
 
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {
