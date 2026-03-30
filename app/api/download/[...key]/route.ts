@@ -39,7 +39,7 @@ export async function GET(request: Request, ctx: RouteContext) {
   try {
     const r2Response = await getR2Object(decodedKey);
 
-    const fileName = item.fileName ?? "download";
+    const fileName = (item.fileName ?? "download").replace(/[\r\n"]/g, "_");
     const contentDisposition = `attachment; filename="${fileName}"`;
 
     const stream = r2Response.Body;

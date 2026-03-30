@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,15 @@ import type { ItemTypeInfo } from "@/types/dashboard";
 import { getItemTypesAction, createItemAction } from "@/app/actions/items";
 import type { DrawerActionState } from "@/app/actions/items";
 import { FileUpload } from "@/components/dashboard/FileUpload";
+import {
+  CODE_LANGUAGE_OPTIONS,
+  DEFAULT_CODE_LANGUAGE,
+  type CodeLanguage,
+  type ContentFormat,
+  isCodeLikeType,
+  isFileType,
+  isUrlType,
+} from "@/lib/dashboard/item-type-helpers";
 
 const CodeEditor = dynamic(
   () => import("@/components/ui/code-editor").then((m) => ({ default: m.CodeEditor })),
@@ -38,57 +48,15 @@ interface CreateItemDialogProps {
 const initialActionState: DrawerActionState = { success: false, error: "" };
 const hasSubmitted = (state: DrawerActionState) => !(state.success === false && state.error === "");
 
-const CODE_LANGUAGE_OPTIONS = [
-  "typescript",
-  "javascript",
-  "json",
-  "python",
-  "bash",
-  "sql",
-  "markdown",
-  "plaintext",
-  "xml",
-  "css",
-  "html",
-  "go",
-  "rust",
-  "java",
-  "c",
-  "cpp",
-] as const;
-
-type CodeLanguage = (typeof CODE_LANGUAGE_OPTIONS)[number];
-const DEFAULT_CODE_LANGUAGE: CodeLanguage = "typescript";
-
-type ContentFormat = "markdown" | "plain" | "code";
-
-function getIsUrlType(type: ItemTypeInfo): boolean {
-  return type.name === "URL" || type.icon === "link";
-}
-
-function isCodeLikeType(type: ItemTypeInfo | null): boolean {
-  if (!type) return false;
-  return (
-    type.icon === "code" ||
-    type.icon === "terminal" ||
-    type.name.toLowerCase() === "snippet" ||
-    type.name.toLowerCase() === "command"
-  );
-}
-
-function isFileType(type: ItemTypeInfo | null): boolean {
-  if (!type) return false;
-  return type.icon === "file" || type.icon === "image";
-}
-
 export function CreateItemDialog({ open, onOpenChange }: CreateItemDialogProps) {
+  const router = useRouter();
   const [itemTypes, setItemTypes] = useState<ItemTypeInfo[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<string>("");
   const selectedType = useMemo(
     () => itemTypes.find((t) => t.id === selectedTypeId) ?? null,
     [itemTypes, selectedTypeId]
   );
-  const selectedIsUrl = selectedType ? getIsUrlType(selectedType) : false;
+  const selectedIsUrl = selectedType ? isUrlType(selectedType) : false;
   const selectedIsCodeLike = isCodeLikeType(selectedType);
   const selectedIsFile = isFileType(selectedType);
 
@@ -132,9 +100,9 @@ export function CreateItemDialog({ open, onOpenChange }: CreateItemDialogProps) 
       setFileName("");
       setFileSize(0);
       onOpenChange(false);
-      window.location.reload();
+      router.refresh();
     }
-  }, [state, onOpenChange]);
+  }, [state, onOpenChange, router]);
 
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {
