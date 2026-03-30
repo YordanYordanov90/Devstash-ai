@@ -76,10 +76,15 @@ export function TopBar({
             className="cursor-pointer pl-9 pr-16 bg-muted/30 border-white/10 focus-visible:border-white/15"
             readOnly
             aria-label="Search items"
-            onClick={() => setSearchOpen(true)}
-            onFocus={(e) => {
-              e.target.blur();
-              setSearchOpen(true);
+            onMouseDown={(e) => {
+              // Keep input from taking focus (prevents focus/blur weirdness).
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              // Open after click finishes so it can't be treated as "outside interaction" on the dialog.
+              e.preventDefault();
+              e.stopPropagation();
+              window.setTimeout(() => setSearchOpen(true), 0);
             }}
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 select-none items-center gap-0.5 rounded bg-background/70 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground md:inline-flex border border-white/10 backdrop-blur">
