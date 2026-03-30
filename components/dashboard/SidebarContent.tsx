@@ -39,26 +39,19 @@ import Link from 'next/link';
 
 interface SidebarContentProps {
   className?: string;
-  prefetchedData?: {
-    itemTypes: ItemTypeInfo[];
-    collections: CollectionInfo[];
-    items: ItemInfo[];
-    tags: TagInfo[];
-    user: UserInfo | null;
-  };
 }
 
-export async function SidebarContent({ className, prefetchedData }: SidebarContentProps) {
+export async function SidebarContent({ className }: SidebarContentProps) {
   const { data: session } = await authServer.getSession();
   const userId = session?.user?.id ?? null;
 
-  let user = prefetchedData?.user ?? null;
-  let itemTypes = prefetchedData?.itemTypes ?? [];
-  let collections = prefetchedData?.collections ?? [];
-  let items = prefetchedData?.items ?? [];
-  let userTags = prefetchedData?.tags ?? [];
+  let user: UserInfo | null = null;
+  let itemTypes: ItemTypeInfo[] = [];
+  let collections: CollectionInfo[] = [];
+  let items: ItemInfo[] = [];
+  let userTags: TagInfo[] = [];
 
-  if (userId && !prefetchedData) {
+  if (userId) {
     const [itemTypesResult, collectionsResult, itemsResult, tagsResult, userResult] =
       await Promise.all([
       getCachedSystemItemTypes(),

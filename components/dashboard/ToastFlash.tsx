@@ -11,7 +11,10 @@ type ToastCode =
   | "itemPinned"
   | "itemUnpinned"
   | "itemSaved"
-  | "itemUnsaved";
+  | "itemUnsaved"
+  | "itemDeleteFailed"
+  | "itemPinFailed"
+  | "itemFavoriteFailed";
 
 function getToastMessage(code: ToastCode): string {
   switch (code) {
@@ -29,6 +32,12 @@ function getToastMessage(code: ToastCode): string {
       return "Saved to favorites.";
     case "itemUnsaved":
       return "Removed from favorites.";
+    case "itemDeleteFailed":
+      return "Delete failed. Try again.";
+    case "itemPinFailed":
+      return "Pin update failed. Try again.";
+    case "itemFavoriteFailed":
+      return "Favorite update failed. Try again.";
   }
 }
 
@@ -41,6 +50,9 @@ function isToastCode(value: string): value is ToastCode {
     "itemUnpinned",
     "itemSaved",
     "itemUnsaved",
+    "itemDeleteFailed",
+    "itemPinFailed",
+    "itemFavoriteFailed",
   ].includes(value);
 }
 

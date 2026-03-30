@@ -159,7 +159,9 @@ export function CollectionsSection({ collections, items, itemTypes }: Collection
                     <span className="truncate font-medium text-foreground">{col.name}</span>
                   </div>
                   <button 
+                    type="button"
                     className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Collection options"
                     onClick={(e) => e.preventDefault()}
                   >
                     <MoreHorizontal className="size-4" />

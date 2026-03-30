@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { redirect } from "next/navigation";
@@ -123,22 +123,33 @@ async function upsertTagsAndAttachToItem(
 ): Promise<void> {
   if (tagNames.length === 0) return;
 
-  for (const name of tagNames) {
-    const existingTag = await db.query.tags.findFirst({
-      where: and(eq(tags.userId, userId), eq(tags.name, name)),
-      columns: { id: true },
-    });
+  const uniqueNames = [...new Set(tagNames)];
+  if (uniqueNames.length === 0) return;
 
-    const tagId = existingTag?.id ?? randomUUID();
-    if (!existingTag) {
-      await db.insert(tags).values({
-        id: tagId,
-        userId,
-        name,
-      });
+  const existing = await db.query.tags.findMany({
+    where: and(eq(tags.userId, userId), inArray(tags.name, uniqueNames)),
+    columns: { id: true, name: true },
+  });
+  const existingByName = new Map(existing.map((t) => [t.name, t.id]));
+
+  const newTags = uniqueNames
+    .filter((name) => !existingByName.has(name))
+    .map((name) => ({ id: randomUUID(), userId, name }));
+
+  if (newTags.length > 0) {
+    await db.insert(tags).values(newTags);
+    for (const t of newTags) {
+      existingByName.set(t.name, t.id);
     }
+  }
 
-    await db.insert(itemTags).values({ itemId, tagId }).onConflictDoNothing();
+  const itemTagRows = uniqueNames
+    .map((name) => existingByName.get(name))
+    .filter((tagId): tagId is string => typeof tagId === "string" && tagId.length > 0)
+    .map((tagId) => ({ itemId, tagId }));
+
+  if (itemTagRows.length > 0) {
+    await db.insert(itemTags).values(itemTagRows).onConflictDoNothing();
   }
 }
 
@@ -167,8 +178,10 @@ async function requireUserOwnedItemOrError(userId: string, itemId: string): Prom
 }
 
 function currentUrl(params: Record<string, string | undefined>, fallback = "/dashboard"): string {
-  const url = params.returnTo && params.returnTo.trim().length > 0 ? params.returnTo : fallback;
-  return url;
+  const returnTo = params.returnTo?.trim();
+  if (!returnTo) return fallback;
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return fallback;
+  return returnTo;
 }
 
 function stripSearchParam(urlPath: string, key: string): string {
@@ -622,100 +635,118 @@ export async function removeTagFromItemAction(
 }
 
 export async function deleteItemAction(formData: FormData): Promise<void> {
-  const userId = await getUserIdOrRedirect();
-  const itemId = getFormString(formData, "itemId");
-  const returnTo = getFormString(formData, "returnTo");
-  const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
-  if (!parsedItemId.success) redirect("/dashboard");
+  try {
+    const userId = await getUserIdOrRedirect();
+    const itemId = getFormString(formData, "itemId");
+    const returnTo = getFormString(formData, "returnTo");
+    const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
+    if (!parsedItemId.success) redirect("/dashboard");
 
-  const itemResult = await db.query.items.findFirst({
-    where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
-    columns: { fileUrl: true },
-  });
+    const itemResult = await db.query.items.findFirst({
+      where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
+      columns: { fileUrl: true },
+    });
 
-  const tagLinks = await db.query.itemTags.findMany({
-    where: eq(itemTags.itemId, parsedItemId.data),
-    columns: { tagId: true },
-  });
-  const tagIdsToCheck = [...new Set(tagLinks.map((l) => l.tagId))];
+    const tagLinks = await db.query.itemTags.findMany({
+      where: eq(itemTags.itemId, parsedItemId.data),
+      columns: { tagId: true },
+    });
+    const tagIdsToCheck = [...new Set(tagLinks.map((l) => l.tagId))];
 
-  await db.delete(items).where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
+    await db
+      .delete(items)
+      .where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
 
-  if (itemResult?.fileUrl) {
-    try {
-      await deleteR2Object(itemResult.fileUrl);
-    } catch {
+    if (itemResult?.fileUrl) {
+      try {
+        await deleteR2Object(itemResult.fileUrl);
+      } catch {
+        // best-effort cleanup
+      }
     }
-  }
 
-  for (const tid of tagIdsToCheck) {
-    await deleteTagIfOrphaned(userId, tid);
+    for (const tid of tagIdsToCheck) {
+      await deleteTagIfOrphaned(userId, tid);
+    }
+    const fallback = dashboardUrl({ toast: "itemDeleted" });
+    revalidatePath("/dashboard");
+    revalidatePath("/items");
+    revalidatePath("/collections");
+    revalidatePath("/tags");
+    revalidatePath("/favorites");
+    const afterStrip = stripSearchParam(currentUrl({ returnTo }, fallback), "item");
+    redirect(urlWithToast(afterStrip, "itemDeleted"));
+  } catch (err) {
+    if (isNextRedirectError(err)) throw err;
+    redirect(dashboardUrl({ toast: "itemDeleteFailed" }));
   }
-  const fallback = dashboardUrl({ toast: "itemDeleted" });
-  revalidatePath("/dashboard");
-  revalidatePath("/items");
-  revalidatePath("/collections");
-  revalidatePath("/tags");
-  revalidatePath("/favorites");
-  const afterStrip = stripSearchParam(currentUrl({ returnTo }, fallback), "item");
-  redirect(urlWithToast(afterStrip, "itemDeleted"));
 }
 
 export async function togglePinAction(formData: FormData): Promise<void> {
-  const userId = await getUserIdOrRedirect();
-  const itemId = getFormString(formData, "itemId");
-  const returnTo = getFormString(formData, "returnTo");
-  const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
-  if (!parsedItemId.success) redirect("/dashboard");
+  try {
+    const userId = await getUserIdOrRedirect();
+    const itemId = getFormString(formData, "itemId");
+    const returnTo = getFormString(formData, "returnTo");
+    const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
+    if (!parsedItemId.success) redirect("/dashboard");
 
-  const itemResult = await db.query.items.findFirst({
-    where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
-    columns: { id: true, isPinned: true },
-  });
-  if (!itemResult) redirect("/dashboard");
+    const itemResult = await db.query.items.findFirst({
+      where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
+      columns: { id: true, isPinned: true },
+    });
+    if (!itemResult) redirect("/dashboard");
 
-  await db
-    .update(items)
-    .set({ isPinned: !itemResult.isPinned, updatedAt: new Date() })
-    .where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
+    await db
+      .update(items)
+      .set({ isPinned: !itemResult.isPinned, updatedAt: new Date() })
+      .where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
 
-  const fallback = dashboardUrl({
-    toast: itemResult.isPinned ? "itemUnpinned" : "itemPinned",
-    item: encodeURIComponent(parsedItemId.data),
-  });
-  revalidatePath("/dashboard");
-  revalidatePath("/items");
-  revalidatePath("/collections");
-  revalidatePath("/favorites");
-  redirect(currentUrl({ returnTo }, fallback));
+    const fallback = dashboardUrl({
+      toast: itemResult.isPinned ? "itemUnpinned" : "itemPinned",
+      item: encodeURIComponent(parsedItemId.data),
+    });
+    revalidatePath("/dashboard");
+    revalidatePath("/items");
+    revalidatePath("/collections");
+    revalidatePath("/favorites");
+    redirect(currentUrl({ returnTo }, fallback));
+  } catch (err) {
+    if (isNextRedirectError(err)) throw err;
+    redirect(dashboardUrl({ toast: "itemPinFailed" }));
+  }
 }
 
 export async function toggleFavoriteAction(formData: FormData): Promise<void> {
-  const userId = await getUserIdOrRedirect();
-  const itemId = getFormString(formData, "itemId");
-  const returnTo = getFormString(formData, "returnTo");
-  const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
-  if (!parsedItemId.success) redirect("/dashboard");
+  try {
+    const userId = await getUserIdOrRedirect();
+    const itemId = getFormString(formData, "itemId");
+    const returnTo = getFormString(formData, "returnTo");
+    const parsedItemId = z.string().trim().min(1).max(128).safeParse(itemId);
+    if (!parsedItemId.success) redirect("/dashboard");
 
-  const itemResult = await db.query.items.findFirst({
-    where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
-    columns: { id: true, isFavorite: true },
-  });
-  if (!itemResult) redirect("/dashboard");
+    const itemResult = await db.query.items.findFirst({
+      where: and(eq(items.userId, userId), eq(items.id, parsedItemId.data)),
+      columns: { id: true, isFavorite: true },
+    });
+    if (!itemResult) redirect("/dashboard");
 
-  await db
-    .update(items)
-    .set({ isFavorite: !itemResult.isFavorite, updatedAt: new Date() })
-    .where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
+    await db
+      .update(items)
+      .set({ isFavorite: !itemResult.isFavorite, updatedAt: new Date() })
+      .where(and(eq(items.userId, userId), eq(items.id, parsedItemId.data)));
 
-  const fallback = dashboardUrl({
-    toast: itemResult.isFavorite ? "itemUnsaved" : "itemSaved",
-    item: encodeURIComponent(parsedItemId.data),
-  });
-  revalidatePath("/dashboard");
-  revalidatePath("/items");
-  revalidatePath("/collections");
-  revalidatePath("/favorites");
-  redirect(currentUrl({ returnTo }, fallback));
+    const fallback = dashboardUrl({
+      toast: itemResult.isFavorite ? "itemUnsaved" : "itemSaved",
+      item: encodeURIComponent(parsedItemId.data),
+    });
+    revalidatePath("/dashboard");
+    revalidatePath("/items");
+    revalidatePath("/collections");
+    revalidatePath("/favorites");
+    redirect(currentUrl({ returnTo }, fallback));
+  } catch (err) {
+    if (isNextRedirectError(err)) throw err;
+    redirect(dashboardUrl({ toast: "itemFavoriteFailed" }));
+  }
 }
 

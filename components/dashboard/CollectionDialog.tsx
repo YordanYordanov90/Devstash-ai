@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const initialActionState: CollectionActionState = { success: false, error: "" };
 const hasSubmitted = (state: CollectionActionState) => !(state.success === false && state.error === "");
 
 export function CollectionDialog({ open, onOpenChange }: CollectionDialogProps) {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [state, action] = useActionState(createCollectionAction, initialActionState);
@@ -39,9 +41,8 @@ export function CollectionDialog({ open, onOpenChange }: CollectionDialogProps) 
     if (handledSuccessRef.current) return;
     handledSuccessRef.current = true;
     toast.success("Collection created");
-    // Full reload remounts the tree; avoid setState/onOpenChange here (React 19: no sync setState in effects).
-    window.location.reload();
-  }, [state]);
+    router.refresh();
+  }, [state, router]);
 
   const lastErrorRef = useRef<string | null>(null);
   useEffect(() => {

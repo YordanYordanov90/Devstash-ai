@@ -24,13 +24,22 @@ const CodeEditor = dynamic(
   }
 );
 import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { XIcon } from "lucide-react";
+import { X as XIcon } from "lucide-react";
 
 import type { ItemDrawerData, ItemTypeInfo } from "@/types/dashboard";
 import {
   itemTypeIcons,
   itemTypeTextColors,
 } from "@/lib/dashboard/item-type-meta";
+import {
+  CODE_LANGUAGE_OPTIONS,
+  DEFAULT_CODE_LANGUAGE,
+  type CodeLanguage,
+  type ContentFormat,
+  isCodeLikeType,
+  isFileType,
+  isUrlType,
+} from "@/lib/dashboard/item-type-helpers";
 import {
   addTagToItemAction,
   deleteItemAction,
@@ -56,55 +65,11 @@ function isNextRedirectError(err: unknown): boolean {
   return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
 }
 
-function getIsUrlType(type: ItemTypeInfo): boolean {
-  return type.name === "URL" || type.icon === "link";
-}
-
-function isCodeLikeType(type: ItemTypeInfo | null): boolean {
-  if (!type) return false;
-  return (
-    type.icon === "code" ||
-    type.icon === "terminal" ||
-    type.name.toLowerCase() === "snippet" ||
-    type.name.toLowerCase() === "command"
-  );
-}
-
-function isFileType(type: ItemTypeInfo | null): boolean {
-  if (!type) return false;
-  return type.icon === "file" || type.icon === "image";
-}
-
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-const CODE_LANGUAGE_OPTIONS = [
-  "typescript",
-  "javascript",
-  "json",
-  "python",
-  "bash",
-  "sql",
-  "markdown",
-  "plaintext",
-  "xml",
-  "css",
-  "html",
-  "go",
-  "rust",
-  "java",
-  "c",
-  "cpp",
-] as const;
-
-type CodeLanguage = (typeof CODE_LANGUAGE_OPTIONS)[number];
-
-const DEFAULT_CODE_LANGUAGE: CodeLanguage = "typescript";
-
-type ContentFormat = "markdown" | "plain" | "code";
 
 export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
   const router = useRouter();
@@ -490,8 +455,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
             <input type="hidden" name="itemId" value={item.id} />
 
             <div className="space-y-1">
-              <label className="text-sm font-medium">Title</label>
+              <label htmlFor="drawer-title" className="text-sm font-medium">
+                Title
+              </label>
               <Input
+                id="drawer-title"
                 name="title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
@@ -500,8 +468,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="drawer-description" className="text-sm font-medium">
+                Description
+              </label>
               <textarea
+                id="drawer-description"
                 name="description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
@@ -511,8 +482,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
 
             {item.contentType === "url" ? (
               <div className="space-y-1">
-                <label className="text-sm font-medium">URL</label>
+                <label htmlFor="drawer-url" className="text-sm font-medium">
+                  URL
+                </label>
                 <Input
+                  id="drawer-url"
                   name="url"
                   value={editUrl}
                   onChange={(e) => setEditUrl(e.target.value)}
@@ -530,8 +504,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
               </div>
             ) : (
               <div className="space-y-1">
-                <label className="text-sm font-medium">Content format</label>
+                <label htmlFor="drawer-content-format" className="text-sm font-medium">
+                  Content format
+                </label>
                 <select
+                  id="drawer-content-format"
                   name="contentFormat"
                   value={editContentFormat}
                   onChange={(e) => setEditContentFormat(e.target.value as ContentFormat)}
@@ -552,8 +529,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
 
                 {editContentFormat === "code" ? (
                   <>
-                    <label className="text-sm font-medium">Language</label>
+                    <label htmlFor="drawer-language" className="text-sm font-medium">
+                      Language
+                    </label>
                     <select
+                      id="drawer-language"
                       name="language"
                       value={editLanguage}
                       onChange={(e) => setEditLanguage(e.target.value as CodeLanguage)}
@@ -566,8 +546,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
                       ))}
                     </select>
 
-                    <label className="text-sm font-medium">Content</label>
+                    <label htmlFor="drawer-code-editor" className="text-sm font-medium">
+                      Content
+                    </label>
                     <CodeEditor
+                      className="mt-1"
                       value={editContent}
                       language={editLanguage}
                       onChange={(next) => setEditContent(next)}
@@ -578,8 +561,11 @@ export function ItemDrawer({ isOpen, itemTypes, item }: ItemDrawerProps) {
                   </>
                 ) : (
                   <>
-                    <label className="text-sm font-medium">Content</label>
+                    <label htmlFor="drawer-content" className="text-sm font-medium">
+                      Content
+                    </label>
                     <textarea
+                      id="drawer-content"
                       name="content"
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
